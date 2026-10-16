@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 import { useT } from './i18n'
 import Landing from './Landing'
 import { Settings, Logo } from './Settings'
+import { Charts } from './Charts'
 
 const ShopCtx = createContext<any>(null)
 const STATUSES = ['New', 'Cutting', 'Stitching', 'Ready', 'Delivered', 'Cancelled']
@@ -102,6 +103,7 @@ function Dashboard() {
     <div className="grid">{stat(t('totalCustomers'), d.customers)}{stat(t('totalOrders'), d.orders.length)}
       {stat(t('todayDeliveries'), live.filter((o: any) => o.delivery_date === today() && o.status !== 'Delivered').length)}
       {stat(t('overdue'), live.filter(isOverdue).length)}{stat(t('received'), money(received))}{stat(t('thisMonth'), money(monthRec))}{stat(t('outstanding'), money(outstanding))}</div>
+    <Charts orders={d.orders} />
     <div className="card">{STATUSES.map(s => <div key={s} className="row" style={{ alignItems: 'center', margin: '6px 0' }}><span style={{ flex: '0 0 110px' }}>{t(s)} ({cnt(s)})</span><div style={{ flex: 1 }}><div className="bar" style={{ width: `${(cnt(s) / max) * 100}%`, minWidth: 4 }} /></div></div>)}</div></>
 }
 
