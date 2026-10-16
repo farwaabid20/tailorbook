@@ -108,25 +108,31 @@ function Dashboard() {
 }
 
 function Customers() {
-  const { t } = useT(); const shop = useContext(ShopCtx); const [rows, setRows] = useState<any[] | null>(null); const [q, setQ] = useState('')
+  const { t, lang } = useT(); const shop = useContext(ShopCtx); const [rows, setRows] = useState<any[] | null>(null); const [q, setQ] = useState(''); const [bal, setBal] = useState<any>({}); const [onlyDue, setOnlyDue] = useState(false)
   const [f, setF] = useState({ name: '', phone: '', address: '', notes: '' }); const [err, setErr] = useState('')
-  const load = async () => { const { data } = await supabase.from('customers').select('*').order('created_at', { ascending: false }); setRows(data || []) }
+  const load = async () => {
+    const [c, o] = await Promise.all([supabase.from('customers').select('*').order('created_at', { ascending: false }),
+    supabase.from('orders').select('customer_id,status,order_items(qty,price),payments(amount)')])
+    const m: any = {}; (o.data || []).filter((x: any) => x.status !== 'Cancelled').forEach((x: any) => { m[x.customer_id] = (m[x.customer_id] || 0) + total(x) - paid(x) })
+    setBal(m); setRows(c.data || [])
+  }
   useEffect(() => { load() }, [])
   async function add(e: FormEvent) {
     e.preventDefault(); if (!f.name.trim()) return setErr(t('required')); setErr('')
     const { error } = await supabase.from('customers').insert({ ...f, name: f.name.trim(), shop_id: shop.id })
     if (error) setErr(error.message); else { setF({ name: '', phone: '', address: '', notes: '' }); load() }
   }
-  const list = (rows || []).filter(r => (r.name + (r.phone || '')).toLowerCase().includes(q.toLowerCase()))
+  const list = (rows || []).filter(r => (r.name + (r.phone || '')).toLowerCase().includes(q.toLowerCase()) && (!onlyDue || (bal[r.id] || 0) > 0))
   return <><h1>{t('customers')}</h1>
     <form className="card" onSubmit={add}><div className="row">
       <div><label>{t('name')}</label><input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></div>
       <div><label>{t('phone')}</label><input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></div>
       <div><label>{t('address')}</label><input value={f.address} onChange={e => setF({ ...f, address: e.target.value })} /></div>
       <button className="gold">{t('add')}</button></div>{err && <p className="err">{err}</p>}</form>
-    <input placeholder={t('search')} value={q} onChange={e => setQ(e.target.value)} style={{ marginBottom: 12 }} />
+    <input placeholder={t('search')} value={q} onChange={e => setQ(e.target.value)} style={{ marginBottom: 8 }} />
+    <p><label><input type="checkbox" style={{ width: 'auto' }} checked={onlyDue} onChange={e => setOnlyDue(e.target.checked)} /> {lang === 'ur' ? 'صرف بقایا والے گاہک' : 'Only customers with a balance'}</label></p>
     {!rows ? <Skeleton /> : list.length === 0 ? <div className="card">{t('noData')}</div> :
-      <div className="card"><table><tbody>{list.map(c => <tr key={c.id}><td><Link to={`/customers/${c.id}`}>{c.name}</Link></td><td>{c.phone}</td><td>{c.address}</td></tr>)}</tbody></table></div>}</>
+      <div className="card"><table><tbody>{list.map(c => <tr key={c.id}><td><Link to={`/customers/${c.id}`}>{c.name}</Link></td><td>{c.phone}</td><td>{c.address}</td><td style={{ color: (bal[c.id] || 0) > 0 ? 'var(--danger)' : undefined }}>{t('balance')}: {money(bal[c.id] || 0)}</td></tr>)}</tbody></table></div>}</>
 }
 
 function CustomerPage() {
@@ -223,10 +229,11 @@ function NewOrder() {
 }
 
 function OrderPage() {
-  const { id } = useParams(); const { t } = useT(); const shop = useContext(ShopCtx); const [o, setO] = useState<any>(null)
+  const nav = useNavigate(); const { id } = useParams(); const { t } = useT(); const shop = useContext(ShopCtx); const [o, setO] = useState<any>(null)
   const [amt, setAmt] = useState(''); const [method, setMethod] = useState('Cash'); const [err, setErr] = useState('')
   const load = async () => { const { data } = await supabase.from('orders').select('*, customers(name,phone,address), order_items(*), payments(*)').eq('id', id).maybeSingle(); setO(data) }
   useEffect(() => { load() }, [id])
+  async function delOrder() { if (confirm(t('confirmDelete'))) { const { error } = await supabase.from('orders').delete().eq('id', id); error ? alert(error.message) : nav('/orders') } }
   async function setStatus(s: string) { await supabase.from('orders').update({ status: s }).eq('id', id); load() }
   async function pay(e: FormEvent) {
     e.preventDefault(); setErr(''); const a = Number(amt); const bal = total(o) - paid(o)
@@ -244,7 +251,7 @@ function OrderPage() {
       <div><label>{t('method')}</label><select value={method} onChange={e => setMethod(e.target.value)}><option value="Cash">{t('Cash')}</option><option value="Card">{t('Card')}</option><option value="Transfer">{t('Transfer')}</option></select></div>
       <button className="gold">{t('addPayment')}</button></form>{err && <p className="err" role="alert">{err}</p>}
     <div className="card"><h3>{t('paid')}</h3>{o.payments.length === 0 ? t('noData') : <table><tbody>{o.payments.map((p: any) => <tr key={p.id}><td>{p.paid_on}</td><td>{t(p.method)}</td><td>{money(p.amount)}</td></tr>)}</tbody></table>}</div>
-    <button onClick={() => window.print()}>{t('print')}</button></div>
+    <button onClick={() => window.print()}>{t('print')}</button> <button className="danger" onClick={delOrder}>{t('delete')}</button></div>
     <div className="receipt"><Logo shop={shop} height={70} /><h1>{shop.name}</h1><p>{shop.phone} {shop.address}</p><h3>{t('receipt')} #{o.order_no}</h3>
       <p>{o.customers?.name} · {o.customers?.phone}</p><p>{t('orderDate')}: {o.order_date} · {t('deliveryDate')}: {o.delivery_date || '—'}</p>
       <table><tbody>{o.order_items.map((i: any) => <tr key={i.id}><td>{i.garment} × {i.qty}</td><td>{money(i.qty * i.price)}</td></tr>)}</tbody></table>

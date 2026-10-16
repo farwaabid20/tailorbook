@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useT } from './i18n'
 
@@ -40,7 +41,7 @@ const D: any = {
 
 function Art() {
     // Decorative illustration drawn in code (no image files, so it can never break)
-    const ticks = Array.from({ length: 24 }, (_, i) => <line key={i} x1={20 + i * 14} y1="0" x2={20 + i * 14} y2={i % 5 === 0 ? 16 : 9} stroke="#14213d" strokeWidth="1.5" />)
+    const ticks = Array.from({ length: 24 }, (_, i) => <line key={i} x1={20 + i * 14} y1="0" x2={20 + i * 14} y2={i % 5 === 0 ? 16 : 9} stroke="#5a1a2b" strokeWidth="1.5" />)
     return <svg viewBox="0 0 380 320" role="img" aria-label="Measuring tape, scissors and thread" className="lp-art">
         <circle cx="190" cy="160" r="140" fill="#ece3d1" opacity=".16" />
         <g transform="translate(20 200) rotate(-8)"><rect width="350" height="32" rx="4" fill="#faf6ee" />{ticks}</g>
@@ -51,6 +52,16 @@ function Art() {
     </svg>
 }
 
+// Optional real photos: put hero.jpg, photo1.jpg, photo2.jpg, photo3.jpg inside the "public" folder.
+function Photo({ src }: { src: string }) {
+    const [ok, setOk] = useState(true)
+    return ok ? <img src={src} alt="" className="lp-photo" loading="lazy" onError={() => setOk(false)} /> : null
+}
+function Hero() {
+    const [ok, setOk] = useState(true)
+    return ok ? <img src="/hero.jpg" alt="Tailor at work" className="lp-photo" onError={() => setOk(false)} /> : <Art />
+}
+
 export default function Landing() {
     const { lang, setLang } = useT(); const c = D[lang]
     return <div className="lp">
@@ -58,8 +69,9 @@ export default function Landing() {
             <button className="ghost lp-lang" onClick={() => setLang(lang === 'en' ? 'ur' : 'en')}>{lang === 'en' ? 'اردو' : 'English'}</button>
             <Link to="/login" className="lp-link">{c.login}</Link><Link to="/login?mode=up" className="btn gold">{c.start}</Link></header>
         <section className="lp-hero"><div><h1>{c.title}</h1><p>{c.sub}</p>
-            <Link to="/login?mode=up" className="btn gold lp-big">{c.start}</Link></div><Art /></section>
+            <Link to="/login?mode=up" className="btn gold lp-big">{c.start}</Link></div><Hero /></section>
         <section className="lp-sec"><div className="lp-grid">{c.f.map((x: string[], i: number) => <div className="card" key={i}><span className="lp-num">0{i + 1}</span><h3>{x[0]}</h3><p>{x[1]}</p></div>)}</div></section>
+        <section className="lp-sec lp-gallery"><Photo src="/photo1.jpg" /><Photo src="/photo2.jpg" /><Photo src="/photo3.jpg" /></section>
         <section className="lp-sec lp-how"><h2>{c.howT}</h2><ol>{c.how.map((x: string, i: number) => <li key={i}>{x}</li>)}</ol><p className="lp-secure">🔒 {c.secure}</p>
             <Link to="/login?mode=up" className="btn gold lp-big">{c.cta}</Link></section>
         <footer className="lp-foot">© TailorBook · {c.foot}</footer>

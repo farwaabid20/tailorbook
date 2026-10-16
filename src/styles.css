@@ -1,22 +1,22 @@
 :root {
-    --navy: #14213d;
-    --navy2: #1f3157;
+    --navy: #5a1a2b;
+    --navy2: #7a2a3f;
     --ivory: #faf6ee;
     --gold: #b8933f;
-    --beige: #ece3d1;
-    --ink: #1c2233;
+    --beige: #efe3d6;
+    --ink: #2a1a1e;
     --card: #fff;
-    --line: #e2d9c6;
+    --line: #e6d6c8;
     --danger: #b3372f
 }
 
 @media (prefers-color-scheme:dark) {
     :root {
-        --ivory: #0f1626;
-        --card: #18233b;
+        --ivory: #1a1114;
+        --card: #26191d;
         --ink: #f1ebdd;
-        --beige: #202d4a;
-        --line: #2d3b5c
+        --beige: #33222a;
+        --line: #46303a
     }
 }
 
@@ -72,7 +72,7 @@ h1 {
 }
 
 .side a {
-    color: #d9dce6;
+    color: #eadbd9;
     padding: 9px 12px;
     border-radius: 8px;
     text-decoration: none
@@ -118,7 +118,7 @@ h1 {
     border: 1px solid var(--line);
     border-radius: 14px;
     padding: 18px;
-    box-shadow: 0 2px 10px rgba(20, 33, 61, .06);
+    box-shadow: 0 2px 10px rgba(60, 20, 30, .06);
     margin-bottom: 16px
 }
 
@@ -291,7 +291,7 @@ th {
 
 .lp-lang {
     color: #fff;
-    border-color: #4b5b82
+    border-color: #9a6070
 }
 
 .lp-hero {
@@ -311,7 +311,7 @@ th {
 }
 
 .lp-hero p {
-    color: #d9dce6;
+    color: #eadbd9;
     font-size: 1.1rem;
     max-width: 34em
 }
@@ -374,4 +374,29 @@ th {
     .lp-hero {
         grid-template-columns: 1fr
     }
+}
+
+.lp-photo {
+    width: 100%;
+    max-width: 460px;
+    border-radius: 16px;
+    object-fit: cover;
+    aspect-ratio: 4/3;
+    justify-self: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .25)
+}
+
+.lp-gallery {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+}
+
+.lp-gallery .lp-photo {
+    max-width: none;
+    box-shadow: 0 2px 10px rgba(60, 20, 30, .12)
+}
+
+.lp-gallery:empty {
+    display: none
 }
