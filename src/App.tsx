@@ -5,6 +5,7 @@ import { useT } from './i18n'
 import Landing from './Landing'
 import { Settings, Logo } from './Settings'
 import { Charts } from './Charts'
+import Portal from './Portal'
 
 const ShopCtx = createContext<any>(null)
 const STATUSES = ['New', 'Cutting', 'Stitching', 'Ready', 'Delivered', 'Cancelled']
@@ -66,6 +67,7 @@ export default function App() {
   }, [])
   const loadShop = async () => { const { data } = await supabase.from('shops').select('*').maybeSingle(); setShop(data) }
   useEffect(() => { if (session) loadShop(); else setShop(undefined) }, [session])
+  if (location.pathname.startsWith('/c/')) return <Routes><Route path="/c/:token" element={<Portal />} /></Routes>   // public customer page, no login
   if (session === undefined) return <div className="main"><Skeleton /></div>
   if (!session) return <Routes><Route path="/" element={<Landing />} /><Route path="/login" element={<Auth />} /><Route path="*" element={<Navigate to="/" />} /></Routes>
   if (shop === undefined) return <div className="main"><Skeleton /></div>
@@ -136,7 +138,8 @@ function Customers() {
 }
 
 function CustomerPage() {
-  const { id } = useParams(); const { t } = useT(); const shop = useContext(ShopCtx); const nav = useNavigate()
+  const { id } = useParams(); const { t, lang } = useT(); const shop = useContext(ShopCtx); const nav = useNavigate()
+  const [copied, setCopied] = useState(false)
   const [c, setC] = useState<any>(null); const [ms, setMs] = useState<any[]>([]); const [orders, setOrders] = useState<any[]>([])
   const [vals, setVals] = useState<any>({}); const [custom, setCustom] = useState(''); const [mnotes, setMnotes] = useState('')
   const load = async () => {
@@ -155,8 +158,17 @@ function CustomerPage() {
   }
   if (!c) return <Skeleton />
   const bal = orders.filter(o => o.status !== 'Cancelled').reduce((s, o) => s + total(o) - paid(o), 0)
+  const link = `${location.origin}/c/${c.share_token}`
+  let ph = (c.phone || '').replace(/\D/g, ''); if (ph.startsWith('0')) ph = '92' + ph.slice(1)
+  const msg = lang === 'ur' ? `السلام علیکم ${c.name}، ${shop.name} میں اپنے آرڈرز، بقایا اور رسید یہاں دیکھیں: ${link}` : `Assalam o Alaikum ${c.name}, see your orders, balance and receipts at ${shop.name} here: ${link}`
+  const waUrl = `https://wa.me/${ph}?text=${encodeURIComponent(msg)}`
+  const copyLink = async () => { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const newLink = async () => { if (confirm(lang === 'ur' ? 'پرانا لنک بند ہو جائے گا۔ نیا لنک بنائیں؟' : 'The old link will stop working. Create a new link?')) { await supabase.from('customers').update({ share_token: crypto.randomUUID() }).eq('id', id); load() } }
   return <><h1>{c.name}</h1>
     <div className="card"><b>{t('balance')}: {money(bal)}</b> &nbsp; <Link className="btn gold" to={`/orders/new?customer=${id}`}>{t('newOrder')}</Link></div>
+    <div className="card"><h3>{lang === 'ur' ? 'گاہک کو لنک بھیجیں' : 'Share with customer'}</h3>
+      <p style={{ opacity: .75, fontSize: '.85rem' }}>{lang === 'ur' ? 'یہ لنک گاہک کو اس کے آرڈرز، بقایا اور رسید دکھاتا ہے۔ جس کے پاس لنک ہو وہ یہ سب دیکھ سکتا ہے۔' : 'This link shows the customer their orders, balance and receipts. Anyone who has the link can see them.'}</p>
+      <p><a className="btn gold" href={waUrl} target="_blank" rel="noreferrer">WhatsApp</a> <button className="ghost" onClick={copyLink}>{copied ? '✓' : (lang === 'ur' ? 'لنک کاپی کریں' : 'Copy link')}</button> <button className="ghost" onClick={newLink}>{lang === 'ur' ? 'نیا لنک بنائیں' : 'New link'}</button></p></div>
     <form className="card" onSubmit={saveC}><div className="row">
       <div><label>{t('name')}</label><input value={c.name} onChange={e => setC({ ...c, name: e.target.value })} /></div>
       <div><label>{t('phone')}</label><input value={c.phone || ''} onChange={e => setC({ ...c, phone: e.target.value })} /></div>

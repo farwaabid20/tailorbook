@@ -3,8 +3,8 @@ import { supabase } from './supabase'
 import { useT } from './i18n'
 
 const D: any = {
-    en: { title: 'Shop settings', logo: 'Shop logo', upload: 'Upload logo', remove: 'Remove logo', saved: 'Saved.', bad: 'Logo must be a PNG, JPG or WebP image under 2 MB.', inches: 'Inches', cm: 'Centimetres', hint: 'PNG, JPG or WebP, up to 2 MB. Shown on receipts.' },
-    ur: { title: 'دکان کی ترتیبات', logo: 'دکان کا لوگو', upload: 'لوگو اپ لوڈ کریں', remove: 'لوگو ہٹائیں', saved: 'محفوظ ہو گیا۔', bad: 'لوگو PNG، JPG یا WebP تصویر ہو اور 2 MB سے کم ہو۔', inches: 'انچ', cm: 'سینٹی میٹر', hint: 'PNG، JPG یا WebP، زیادہ سے زیادہ 2 MB۔ رسید پر نظر آئے گا۔' }
+    en: { title: 'Shop settings', logo: 'Shop logo', upload: 'Upload logo', remove: 'Remove logo', saved: 'Saved.', bad: 'Logo must be a PNG, JPG or WebP image under 2 MB.', inches: 'Inches', cm: 'Centimetres', hint: 'PNG, JPG or WebP, up to 2 MB. Shown on receipts.', danger: 'Delete my shop', dangerText: 'This permanently deletes your shop, all customers, measurements, orders, payments and your logo. It cannot be undone. Type your shop name to confirm.', mismatch: 'The name you typed does not match your shop name.', sure: 'Last warning: delete everything permanently?' },
+    ur: { title: 'دکان کی ترتیبات', logo: 'دکان کا لوگو', upload: 'لوگو اپ لوڈ کریں', remove: 'لوگو ہٹائیں', saved: 'محفوظ ہو گیا۔', bad: 'لوگو PNG، JPG یا WebP تصویر ہو اور 2 MB سے کم ہو۔', inches: 'انچ', cm: 'سینٹی میٹر', hint: 'PNG، JPG یا WebP، زیادہ سے زیادہ 2 MB۔ رسید پر نظر آئے گا۔', danger: 'میری دکان حذف کریں', dangerText: 'اس سے آپ کی دکان، تمام گاہک، ناپ، آرڈرز، ادائیگیاں اور لوگو ہمیشہ کے لیے حذف ہو جائیں گے۔ اسے واپس نہیں کیا جا سکتا۔ تصدیق کے لیے اپنی دکان کا نام لکھیں۔', mismatch: 'آپ نے جو نام لکھا وہ دکان کے نام سے نہیں ملتا۔', sure: 'آخری وارننگ: کیا سب کچھ مستقل طور پر حذف کریں؟' }
 }
 
 // Shows the shop logo (private file, opened with a temporary signed link)
@@ -41,6 +41,15 @@ export function Settings({ shop, onSaved }: { shop: any; onSaved: () => void }) 
         if (!error && shop.logo_path) await supabase.storage.from('logos').remove([shop.logo_path])
         setBusy(false); if (error) setErr(error.message); else { setMsg(d.saved); onSaved() }
     }
+    const [confirmName, setConfirmName] = useState('')
+    async function deleteShop() {
+        setErr(''); setMsg('')
+        if (confirmName.trim() !== shop.name) return setErr(d.mismatch)
+        if (!confirm(d.sure)) return
+        if (shop.logo_path) await supabase.storage.from('logos').remove([shop.logo_path])
+        const { error } = await supabase.from('shops').delete().eq('id', shop.id)   // cascades to customers, orders, payments
+        if (error) setErr(error.message); else onSaved()
+    }
     async function removeLogo() {
         if (!shop.logo_path) return
         await supabase.storage.from('logos').remove([shop.logo_path])
@@ -57,5 +66,8 @@ export function Settings({ shop, onSaved }: { shop: any; onSaved: () => void }) 
             <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e => { upload(e.target.files?.[0]); e.target.value = '' }} />
             <p style={{ opacity: .7, fontSize: '.85rem' }}>{d.hint}</p>
             {shop.logo_path && <button className="ghost" onClick={removeLogo}>{d.remove}</button>}</div>
-        {err && <p className="err" role="alert">{err}</p>}{msg && <p>{msg}</p>}</>
+        {err && <p className="err" role="alert">{err}</p>}{msg && <p>{msg}</p>}
+        <div className="card" style={{ borderColor: 'var(--danger)' }}><h3 style={{ color: 'var(--danger)' }}>{d.danger}</h3><p>{d.dangerText}</p>
+            <input value={confirmName} onChange={e => setConfirmName(e.target.value)} placeholder={shop.name} />
+            <p><button className="danger" onClick={deleteShop}>{d.danger}</button></p></div></>
 }
