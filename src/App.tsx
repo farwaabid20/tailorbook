@@ -19,13 +19,24 @@ const isOverdue = (o: any) => o.delivery_date && o.delivery_date < today() && ![
 
 function Skeleton() { return <div className="grid"><div className="skel" /><div className="skel" /><div className="skel" /></div> }
 
+const OK_DOMAINS = ['gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'proton.me', 'protonmail.com']
+const TYPOS: any = { 'gmial.com': 'gmail.com', 'gmail.con': 'gmail.com', 'gamil.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.cm': 'gmail.com', 'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'hotmial.com': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'outlok.com': 'outlook.com', 'outlook.con': 'outlook.com' }
+function emailProblem(email: string, lang: string): string {
+  const d = email.trim().toLowerCase().split('@')[1] || ''
+  if (OK_DOMAINS.includes(d)) return ''
+  if (TYPOS[d]) return lang === 'ur' ? `کیا آپ کا مطلب ${TYPOS[d]} تھا؟ براہ کرم ای میل درست کریں۔` : `Did you mean ${TYPOS[d]}? Please correct your email.`
+  return lang === 'ur' ? 'براہ کرم اپنی اصلی، چلتی ہوئی ای میل لکھیں (Gmail، Yahoo، Outlook، Hotmail یا iCloud)۔ تصدیق کا لنک اسی پر آئے گا۔' : 'Please use your real email (Gmail, Yahoo, Outlook, Hotmail or iCloud). The confirmation link will be sent there.'
+}
+
 function Auth() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [mode, setMode] = useState<'in' | 'up' | 'reset'>(new URLSearchParams(location.search).get('mode') === 'up' ? 'up' : 'in')
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('')
   const [msg, setMsg] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
   async function submit(e: FormEvent) {
-    e.preventDefault(); setErr(''); setMsg(''); setBusy(true)
+    e.preventDefault(); setErr(''); setMsg('')
+    if (mode === 'up') { const p = emailProblem(email, lang); if (p) return setErr(p) }
+    setBusy(true)
     const r: any = mode === 'in' ? await supabase.auth.signInWithPassword({ email, password })
       : mode === 'up' ? await supabase.auth.signUp({ email, password })
         : await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin })
@@ -38,6 +49,7 @@ function Auth() {
     <form onSubmit={submit}>
       <label>{t('email')}</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} />
       {mode !== 'reset' && <><label>{t('password')}</label><input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} /></>}
+      {mode === 'up' && <p style={{ opacity: .7, fontSize: '.85rem' }}>{lang === 'ur' ? 'اصلی ای میل لکھیں، تصدیق کا لنک اسی پر آئے گا۔' : 'Use your real email: the confirmation link is sent there.'}</p>}
       {err && <p className="err" role="alert">{err}</p>}{msg && <p>{msg}</p>}
       <p><button className="gold" disabled={busy}>{mode === 'in' ? t('signIn') : mode === 'up' ? t('signUp') : t('save')}</button></p>
     </form>
